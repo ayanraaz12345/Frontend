@@ -7,9 +7,9 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  description = "Existing AWS key pair name"
+  default = "windows-pem-key"
 }
 
 variable "repo_url" {
-  description = ""
+  default = "https://github.com/ayanraaz12345/Frontend.git"
 }

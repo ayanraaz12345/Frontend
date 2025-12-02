@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 module "docker_ec2" {
-  source        = "./modules/ec2-docker"
+  source        = "./modules/ec2_docker"
   instance_type = var.instance_type
   key_name      = var.key_name
   repo_url      = var.repo_url

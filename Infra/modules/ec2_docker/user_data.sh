@@ -1,22 +1,20 @@
 #!/bin/bash
-yum update -y
+set -xe
+
+# Update system
+sudo apt-get update -y
+sudo apt-get upgrade -y
 
 # Install Docker
-amazon-linux-extras install docker -y
-systemctl start docker
-systemctl enable docker
-usermod -a -G docker ec2-user
+sudo apt install -y docker.io
 
-# Install Git
-yum install -y git
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
 
-# Pull your project
-git clone ${repo_url} /home/ec2-user/app
+# Install git
+sudo apt-get install -y git
+sudo docker pull rajsingh81/frontend:latest
+sudo docker run -d -p 3000:3000 --name e_commerce rajsingh81/frontend:latest
 
-cd /home/ec2-user/app
 
-# Build Docker image
-docker build -t myapp .
-
-# Run Docker container
-docker run -d -p 3000:80 myapp
