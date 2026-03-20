@@ -1,0 +1,44 @@
+# 🔥 Terraform files (VERY IMPORTANT)
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+*.tfvars
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.lock.hcl
+
+# 🔐 Sensitive files
+.env
+*.pem
+*.key
+*.pub
+
+# 🧪 Terraform plan files
+*.plan
+
+# 📦 Node modules (if using Node app)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# 🧹 OS files
+.DS_Store
+Thumbs.db
+
+# 🧾 Logs
+*.log
+
+# 🐳 Docker (optional)
+docker-compose.override.yml
+
+# 🧠 IDE / Editor
+.vscode/
+.idea/
+
+# 🚫 GitHub Actions artifacts (optional)
+*.zip
+*.tar.gz

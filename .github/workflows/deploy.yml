@@ -1,0 +1,71 @@
+name: Full CI/CD Pipeline
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: my-app
+  ACCOUNT_ID: 961641296773
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: terraform-ecr # 👉 agar terraform folder alag hai
+
+    steps:
+      # 🔹 1. Checkout code
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # 🔐 2. AWS Login using OIDC
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::961641296773:role/OIDC_Raj
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 🏗️ 3. Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # ⚙️ 4. Terraform Init
+      - name: Terraform Init
+        run: terraform init
+
+      # 📊 5. Terraform Apply (NO tfvars)
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="region=${{ env.AWS_REGION }}" \
+            -var="ecr_repo_name=${{ env.ECR_REPOSITORY }}"
+
+      # 📦 6. Move back to root (for Docker build)
+      - name: Change Directory
+        run: cd ..
+
+      # 🐳 7. Login to ECR
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 🔨 8. Build Docker Image
+      - name: Build Image
+        run: docker build -t $ECR_REPOSITORY .
+
+      # 🏷️ 9. Tag Image
+      - name: Tag Image
+        run: |
+          docker tag $ECR_REPOSITORY:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+
+      # 🚀 10. Push Image
+      - name: Push Image
+        run: |
+          docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
