@@ -17,10 +17,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: terraform-ecr # 👉 agar terraform folder alag hai
-
     steps:
       # 🔹 1. Checkout code
       - name: Checkout Code
@@ -39,33 +35,31 @@ jobs:
 
       # ⚙️ 4. Terraform Init
       - name: Terraform Init
+        working-directory: terraform-ecr
         run: terraform init
 
-      # 📊 5. Terraform Apply (NO tfvars)
+      # 📊 5. Terraform Apply
       - name: Terraform Apply
+        working-directory: terraform-ecr
         run: |
           terraform apply -auto-approve \
             -var="region=${{ env.AWS_REGION }}" \
             -var="ecr_repo_name=${{ env.ECR_REPOSITORY }}"
 
-      # 📦 6. Move back to root (for Docker build)
-      - name: Change Directory
-        run: cd ..
-
-      # 🐳 7. Login to ECR
+      # 🐳 6. Login to ECR
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 🔨 8. Build Docker Image
+      # 🔨 7. Build Docker Image (ROOT folder)
       - name: Build Image
         run: docker build -t $ECR_REPOSITORY .
 
-      # 🏷️ 9. Tag Image
+      # 🏷️ 8. Tag Image
       - name: Tag Image
         run: |
           docker tag $ECR_REPOSITORY:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
 
-      # 🚀 10. Push Image
+      # 🚀 9. Push Image
       - name: Push Image
         run: |
           docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
