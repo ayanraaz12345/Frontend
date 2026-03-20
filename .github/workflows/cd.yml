@@ -1,4 +1,4 @@
-name: CD Pipeline (FULL DEPLOY + LIVE)
+name: CD Pipeline (EKS + ArgoCD + Live App)
 
 on:
   workflow_dispatch:
@@ -19,9 +19,10 @@ jobs:
 
     steps:
       # 🔹 Checkout
-      - uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v3
 
-      # 🔐 AWS OIDC Login
+      # 🔐 AWS Login (OIDC)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -41,13 +42,19 @@ jobs:
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
-      # 🧹 Delete old cluster (safe)
-      - name: Delete old cluster
+      # 🔍 Check if cluster exists
+      - name: Check Cluster
+        id: check
         run: |
-          eksctl delete cluster --name $CLUSTER_NAME --region $AWS_REGION || true
+          if eksctl get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
-      # 🚀 Create EKS cluster
+      # 🚀 Create cluster if not exists
       - name: Create EKS Cluster
+        if: steps.check.outputs.exists == 'false'
         run: |
           eksctl create cluster \
             --name $CLUSTER_NAME \
@@ -68,7 +75,7 @@ jobs:
       # ⏳ Wait for ArgoCD
       - name: Wait for ArgoCD
         run: |
-          kubectl wait --for=condition=available deployment argocd-server -n argocd --timeout=300s
+          kubectl rollout status deployment argocd-server -n argocd --timeout=300s
 
       # 🌍 Expose ArgoCD UI
       - name: Expose ArgoCD
@@ -106,17 +113,17 @@ jobs:
         run: |
           argocd app sync my-app
 
-      # 🌍 Expose Application Service
+      # 🌍 Expose Application
       - name: Expose App
         run: |
           kubectl patch svc my-app-service \
-          -p '{"spec": {"type": "LoadBalancer"}}' || true
+          -p '{"spec": {"type": "LoadBalancer"}} || true
 
       # 📡 Get URLs
-      - name: Get URLs
+      - name: Show URLs
         run: |
           echo "===== ArgoCD URL ====="
           kubectl get svc argocd-server -n argocd
 
-          echo "===== Application URL ====="
+          echo "===== App URL ====="
           kubectl get svc my-app-service
