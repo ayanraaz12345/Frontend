@@ -1,4 +1,4 @@
-name: CD Pipeline (EKS + ArgoCD)
+name: CD Pipeline (FULL DEPLOY + LIVE)
 
 on:
   workflow_dispatch:
@@ -11,12 +11,14 @@ env:
   AWS_REGION: us-east-1
   CLUSTER_NAME: my-cluster
   ACCOUNT_ID: 961641296773
+  REPO_URL: https://github.com/ayanraaz12345/my-app-manifest.git
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 🔹 Checkout
       - uses: actions/checkout@v3
 
       # 🔐 AWS OIDC Login
@@ -32,11 +34,6 @@ jobs:
           curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz
           sudo mv eksctl /usr/local/bin
 
-      # ☸️ Create EKS
-      - name: Create EKS Cluster
-        run: |
-          eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION
-
       # 🔧 Install kubectl
       - name: Install kubectl
         run: |
@@ -44,19 +41,40 @@ jobs:
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
+      # 🧹 Delete old cluster (safe)
+      - name: Delete old cluster
+        run: |
+          eksctl delete cluster --name $CLUSTER_NAME --region $AWS_REGION || true
+
+      # 🚀 Create EKS cluster
+      - name: Create EKS Cluster
+        run: |
+          eksctl create cluster \
+            --name $CLUSTER_NAME \
+            --region $AWS_REGION \
+            --nodes 2
+
       # 🔗 Update kubeconfig
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-          - name: Install ArgoCD
-          run: |
-            kubectl create namespace argocd || true
-            kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
+      # 🚀 Install ArgoCD (stable)
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd || true
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
 
-          - name: Wait for ArgoCD
-          run: |
-            kubectl wait --for=condition=available deployment argocd-server -n argocd --timeout=300s
+      # ⏳ Wait for ArgoCD
+      - name: Wait for ArgoCD
+        run: |
+          kubectl wait --for=condition=available deployment argocd-server -n argocd --timeout=300s
+
+      # 🌍 Expose ArgoCD UI
+      - name: Expose ArgoCD
+        run: |
+          kubectl patch svc argocd-server -n argocd \
+          -p '{"spec": {"type": "LoadBalancer"}}'
 
       # 🔧 Install ArgoCD CLI
       - name: Install ArgoCD CLI
@@ -71,17 +89,34 @@ jobs:
           kubectl port-forward svc/argocd-server -n argocd 8080:443 &
           sleep 20
           PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode)
+          echo "ARGOCD PASSWORD: $PASSWORD"
           argocd login localhost:8080 --username admin --password $PASSWORD --insecure
 
       # 🔗 Create ArgoCD App
       - name: Create App
         run: |
           argocd app create my-app \
-            --repo https://github.com/ayanraaz12345/my-app-manifest.git \
+            --repo $REPO_URL \
             --path . \
             --dest-server https://kubernetes.default.svc \
             --dest-namespace default || true
 
       # 🔄 Sync App
       - name: Sync App
-        run: argocd app sync my-app
+        run: |
+          argocd app sync my-app
+
+      # 🌍 Expose Application Service
+      - name: Expose App
+        run: |
+          kubectl patch svc my-app-service \
+          -p '{"spec": {"type": "LoadBalancer"}}' || true
+
+      # 📡 Get URLs
+      - name: Get URLs
+        run: |
+          echo "===== ArgoCD URL ====="
+          kubectl get svc argocd-server -n argocd
+
+          echo "===== Application URL ====="
+          kubectl get svc my-app-service
