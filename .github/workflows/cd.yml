@@ -1,0 +1,88 @@
+name: CD Pipeline (EKS + ArgoCD)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: my-cluster
+  ACCOUNT_ID: 961641296773
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      # 🔐 AWS OIDC Login
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::961641296773:role/OIDC_Raj
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 🧱 Install eksctl
+      - name: Install eksctl
+        run: |
+          curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz
+          sudo mv eksctl /usr/local/bin
+
+      # ☸️ Create EKS
+      - name: Create EKS Cluster
+        run: |
+          eksctl create cluster --name $CLUSTER_NAME --region $AWS_REGION
+
+      # 🔧 Install kubectl
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/
+
+      # 🔗 Update kubeconfig
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+
+      # 🚀 Install ArgoCD
+      - name: Install ArgoCD
+        run: |
+          kubectl create namespace argocd || true
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+      # ⏳ Wait for ArgoCD
+      - name: Wait for ArgoCD
+        run: sleep 60
+
+      # 🔧 Install ArgoCD CLI
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin
+
+      # 🔑 Login ArgoCD
+      - name: Login ArgoCD
+        run: |
+          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
+          sleep 20
+          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode)
+          argocd login localhost:8080 --username admin --password $PASSWORD --insecure
+
+      # 🔗 Create ArgoCD App
+      - name: Create App
+        run: |
+          argocd app create my-app \
+            --repo https://github.com/ayanraaz12345/my-app-manifest.git \
+            --path . \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace default || true
+
+      # 🔄 Sync App
+      - name: Sync App
+        run: argocd app sync my-app
