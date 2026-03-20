@@ -49,15 +49,14 @@ jobs:
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      # 🚀 Install ArgoCD
-      - name: Install ArgoCD
-        run: |
-          kubectl create namespace argocd || true
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          - name: Install ArgoCD
+          run: |
+            kubectl create namespace argocd || true
+            kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
 
-      # ⏳ Wait for ArgoCD
-      - name: Wait for ArgoCD
-        run: sleep 60
+          - name: Wait for ArgoCD
+          run: |
+            kubectl wait --for=condition=available deployment argocd-server -n argocd --timeout=300s
 
       # 🔧 Install ArgoCD CLI
       - name: Install ArgoCD CLI
