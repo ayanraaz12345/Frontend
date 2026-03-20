@@ -2,12 +2,10 @@ provider "aws" {
   region = var.region
 }
 
-resource "aws_ecr_repository" "my_app" {
+# Read existing ECR
+data "aws_ecr_repository" "existing" {
   name = var.ecr_repo_name
-
-  image_scanning_configuration {
-    scan_on_push = true
-  }
-
-  image_tag_mutability = "MUTABLE"
 }
+
+# Optional: check AWS identity
+data "aws_caller_identity" "current" {}

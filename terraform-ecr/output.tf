@@ -1,3 +1,3 @@
 output "repository_url" {
-  value = aws_ecr_repository.my_app.repository_url
+  value = data.aws_ecr_repository.existing.repository_url
 }
