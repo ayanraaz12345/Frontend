@@ -91,13 +91,11 @@ jobs:
           sudo mv argocd /usr/local/bin
 
       # 🔑 Login ArgoCD
-      - name: Login ArgoCD
+      - name: Get ArgoCD Password
         run: |
-          kubectl port-forward svc/argocd-server -n argocd 8080:443 &
-          sleep 20
-          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode)
-          echo "ARGOCD PASSWORD: $PASSWORD"
-          argocd login localhost:8080 --username admin --password $PASSWORD --insecure
+          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64  --decode)
+          echo "===== ARGOCD PASSWORD ====="
+          echo $PASSWORD
 
       # 🔗 Create ArgoCD App
       - name: Create App
