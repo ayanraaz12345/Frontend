@@ -83,39 +83,42 @@ jobs:
           kubectl patch svc argocd-server -n argocd \
           -p '{"spec": {"type": "LoadBalancer"}}'
 
-      # 🔧 Install ArgoCD CLI
-      - name: Install ArgoCD CLI
-        run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          chmod +x argocd
-          sudo mv argocd /usr/local/bin
-
-      # 🔑 Login ArgoCD
+      # 🔑 Get ArgoCD Password
       - name: Get ArgoCD Password
         run: |
-          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64  --decode)
+          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode)
           echo "===== ARGOCD PASSWORD ====="
           echo $PASSWORD
 
-      # 🔗 Create ArgoCD App
+      # 🔥 Create ArgoCD Application (FIXED)
       - name: Create App
         run: |
-          argocd app create my-app \
-            --repo $REPO_URL \
-            --path . \
-            --dest-server https://kubernetes.default.svc \
-            --dest-namespace default || true
-
-      # 🔄 Sync App
-      - name: Sync App
-        run: |
-          argocd app sync my-app
+          kubectl apply -f - <<EOF
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: my-app
+            namespace: argocd
+          spec:
+            project: default
+            source:
+              repoURL: $REPO_URL
+              targetRevision: HEAD
+              path: .
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: default
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+          EOF
 
       # 🌍 Expose Application
       - name: Expose App
         run: |
           kubectl patch svc my-app-service \
-          -p '{"spec": {"type": "LoadBalancer"}} || true
+          -p '{"spec": {"type": "LoadBalancer"}}' || true
 
       # 📡 Get URLs
       - name: Show URLs
