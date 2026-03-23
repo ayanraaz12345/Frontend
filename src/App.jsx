@@ -19,7 +19,7 @@ import OrderDetails from './view/components/order-detail/OrderDetails';
 import LogOut from './view/components/log-out/LogOut';
 import Order from './view/components/order/Order';
 import OrderAdmin from './admin/components/order/orderAdmin';
-import ProductDetailsAdmin from './admin/components/product-details/ProductDetailsAdmin';
+import ProductDetailsAdmin from './admin/components/product-detail/ProductDetailsAdmin';
 
 
 

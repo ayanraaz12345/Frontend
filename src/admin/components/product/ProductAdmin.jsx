@@ -5,7 +5,7 @@ import TextField from '@mui/material/TextField';
 import { useFormik } from 'formik';
 import { productSchema } from '../../../yupShema/productSchema';
 import { Button, Grid, Grid2, Typography } from '@mui/material';
-import ProductCardAdmin from './product card/productCardAdmin';
+import ProductCardAdmin from './product-card/productCardAdmin';
 
 
 
