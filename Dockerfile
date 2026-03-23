@@ -8,6 +8,9 @@ RUN npm install
 
 COPY . .
 
+# 🔥 ADD THIS (IMPORTANT)
+RUN npm run build
+
 EXPOSE 3000
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "start"]
