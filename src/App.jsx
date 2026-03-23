@@ -21,7 +21,7 @@ import Order from './view/components/order/Order';
 import OrderAdmin from './admin/components/order/OrderAdmin';
 import ProductDetailsAdmin from './admin/components/product-detail/ProductDetailsAdmin';
 import OrderAdmin from './admin/components/order/OrderAdmin';
-import ProductCardAdmin from './admin/components/product/product- card/ProductCardAdmin';
+import ProductCardAdmin from './product/product- card/ProductCardAdmin';
 
 
 
