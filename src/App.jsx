@@ -10,7 +10,7 @@ import Cart from './view/components/cart/Cart';
 import Login from './view/components/login/Login';
 import Register from './view/components/register/Register';
 import Admin from './admin/Admin';
-import Dashboard from './admin/components/dashboard/DashBoard';
+import Dashboard from './admin/components/dashboard/Dashboard';
 import ProductAdmin from './admin/components/product/ProductAdmin';
 import UserAdmin from './admin/components/user/UserAdmin';
 import NotFound from './view/components/not found/NotFound';
@@ -37,28 +37,28 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path='product' element={<ProductAdmin />} />
             <Route path='user' element={<UserAdmin />} />
-            <Route path='product-details' element={<ProductDetailsAdmin/>}/>
-            <Route path='order' element={<OrderAdmin/>}/>
-            <Route path='dashboard' element={<Dashboard/>}/>
+            <Route path='product-details' element={<ProductDetailsAdmin />} />
+            <Route path='order' element={<OrderAdmin />} />
+            <Route path='dashboard' element={<Dashboard />} />
 
 
 
           </Route>
 
           {/* view part */}
-          <Route path='/' element={<View/>}>
-            <Route index element={<Home/>} />
-            <Route path='home' element={<Home/>} />
-            <Route path='product' element={<Product/>} />
-           <Route path='product-detail' element={<ProductDetails/>}/>
-    
-            <Route path='cart' element={<Cart/>} />
-            <Route path='order'element={<Order/>}/>
-            <Route path='order-detail' element={<OrderDetails/>}/>
-            <Route path='login' element={<Login/>} />
-            <Route path='register' element={<Register/>} />
-            <Route path='logout' element={<LogOut/>}/>
-            <Route path='*' element={<NotFound/>} />
+          <Route path='/' element={<View />}>
+            <Route index element={<Home />} />
+            <Route path='home' element={<Home />} />
+            <Route path='product' element={<Product />} />
+            <Route path='product-detail' element={<ProductDetails />} />
+
+            <Route path='cart' element={<Cart />} />
+            <Route path='order' element={<Order />} />
+            <Route path='order-detail' element={<OrderDetails />} />
+            <Route path='login' element={<Login />} />
+            <Route path='register' element={<Register />} />
+            <Route path='logout' element={<LogOut />} />
+            <Route path='*' element={<NotFound />} />
 
 
 
@@ -68,7 +68,7 @@ function App() {
 
         </Routes>
       </BrowserRouter>
- 
+
     </>
   )
 }
