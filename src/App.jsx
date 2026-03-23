@@ -13,7 +13,6 @@ import Admin from './admin/Admin';
 import Dashboard from './admin/components/dashboard/Dashboard';
 import ProductAdmin from './admin/components/product/ProductAdmin';
 import UserAdmin from './admin/components/user/UserAdmin';
-import ProductDetailsAdmin from './admin/components/product-detail/ProductDetailsAdmin';
 import OrderAdmin from './admin/components/order/OrderAdmin';
 // import ProductCardAdmin from './admin/components/product/product-card/ProductCardAdmin';
 
@@ -22,6 +21,7 @@ import ProductDetails from './view/components/product-detail/ProductDetails';
 import OrderDetails from './view/components/order-detail/OrderDetails';
 import LogOut from './view/components/log-out/LogOut';
 import Order from './view/components/order/Order';
+import ProductCardAdmin from './admin/components/product/product-card/ProductCardAdmin';
 
 function App() {
   return (
@@ -37,7 +37,7 @@ function App() {
             <Route path='user' element={<UserAdmin />} />
             <Route path='product-details' element={<ProductDetailsAdmin />} />
             <Route path='order' element={<OrderAdmin />} />
-            {/* <Route path='product-card' element={<ProductCardAdmin />} /> */}
+            {<Route path='product-card' element={<ProductCardAdmin />} />}
           </Route>
 
           {/* USER ROUTES */}
