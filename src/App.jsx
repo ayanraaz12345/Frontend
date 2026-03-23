@@ -15,6 +15,7 @@ import ProductAdmin from './admin/components/product/ProductAdmin';
 import UserAdmin from './admin/components/user/UserAdmin';
 import ProductDetailsAdmin from './admin/components/product-detail/ProductDetailsAdmin';
 import OrderAdmin from './admin/components/order/OrderAdmin';
+// import ProductCardAdmin from './admin/components/product/product-card/ProductCardAdmin';
 
 import NotFound from './view/components/not-found/NotFound';
 import ProductDetails from './view/components/product-detail/ProductDetails';
@@ -36,7 +37,7 @@ function App() {
             <Route path='user' element={<UserAdmin />} />
             <Route path='product-details' element={<ProductDetailsAdmin />} />
             <Route path='order' element={<OrderAdmin />} />
-            <Route path='product-card' element={<ProductCardAdmin />} />
+            {/* <Route path='product-card' element={<ProductCardAdmin />} /> */}
           </Route>
 
           {/* USER ROUTES */}
