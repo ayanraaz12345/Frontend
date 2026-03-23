@@ -18,9 +18,10 @@ import ProductDetails from './view/components/product-detail/ProductDetails';
 import OrderDetails from './view/components/order-detail/OrderDetails';
 import LogOut from './view/components/log-out/LogOut';
 import Order from './view/components/order/Order';
-import OrderAAdmin from './admin/components/order/OrderAdmin';
+import OrderAdmin from './admin/components/order/OrderAdmin';
 import ProductDetailsAdmin from './admin/components/product-detail/ProductDetailsAdmin';
-
+import OrderAdmin from './admin/components/order/OrderAdmin';
+import ProductCardAdmin from './admin/components/product/product- card/ProductCardAdmin';
 
 
 
@@ -40,6 +41,8 @@ function App() {
             <Route path='product-details' element={<ProductDetailsAdmin />} />
             <Route path='order' element={<OrderAdmin />} />
             <Route path='dashboard' element={<Dashboard />} />
+            <Route path='product- card' element={<ProductCardAdmin />} />
+
 
 
 
