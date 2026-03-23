@@ -57,9 +57,33 @@ jobs:
       # 🏷️ 8. Tag Image
       - name: Tag Image
         run: |
-          docker tag $ECR_REPOSITORY:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+          docker tag $ECR_REPOSITORY:latest $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.cm/$ECR_REPOSITORY:latest
 
       # 🚀 9. Push Image
       - name: Push Image
         run: |
           docker push $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$ECR_REPOSITORY:latest
+
+      # 🔥 10. Create ArgoCD Application (ADDED ONLY THIS)
+      - name: Create ArgoCD Application
+        run: |
+          kubectl apply -f - <<EOF
+          apiVersion: argoproj.io/v1alpha1
+          kind: Application
+          metadata:
+            name: my-app
+            namespace: argocd
+          spec:
+            project: default
+            source:
+              repoURL: $REPO_URL
+              targetRevision: HEAD
+              path: .
+            destination:
+              server: https://kubernetes.default.svc
+              namespace: default
+            syncPolicy:
+              automated:
+                prune: true
+                selfHeal: true
+          EOF
