@@ -1,15 +1,17 @@
 FROM node:18-alpine
 
-WORKDIR /usr/src/app
+WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm install
 
 COPY . .
 
-RUN npm run build   # 🔥 MUST
+RUN npm run build
+
+# 🔥 Serve static build
+RUN npm install -g serve
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["serve", "-s", "dist", "-l", "3000"]
