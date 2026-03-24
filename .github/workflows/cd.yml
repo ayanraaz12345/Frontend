@@ -1,4 +1,4 @@
-name: CD Pipeline (EKS + ArgoCD + Live App)
+name: CD Pipeline (EKS + ArgoCD + Ingress + FIXED)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,6 @@ permissions:
 env:
   AWS_REGION: us-east-1
   CLUSTER_NAME: my-cluster
-  ACCOUNT_ID: 961641296773
   REPO_URL: https://github.com/ayanraaz12345/my-app-manifest.git
 
 jobs:
@@ -18,80 +17,62 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 🔹 Checkout
-      - name: Checkout Code
+      # 1️⃣ Checkout
+      - name: Checkout
         uses: actions/checkout@v3
 
-      # 🔐 AWS Login (OIDC)
+      # 2️⃣ AWS Login
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::961641296773:role/OIDC_Raj
           aws-region: ${{ env.AWS_REGION }}
 
-      # 🧱 Install eksctl
-      - name: Install eksctl
-        run: |
-          curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz
-          sudo mv eksctl /usr/local/bin
-
-      # 🔧 Install kubectl
+      # 3️⃣ Install kubectl
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
-      # 🔍 Check if cluster exists
-      - name: Check Cluster
-        id: check
+      # 4️⃣ Install Helm (NEW 🔥)
+      - name: Install Helm
         run: |
-          if eksctl get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      # 🚀 Create cluster if not exists
-      - name: Create EKS Cluster
-        if: steps.check.outputs.exists == 'false'
-        run: |
-          eksctl create cluster \
-            --name $CLUSTER_NAME \
-            --region $AWS_REGION \
-            --nodes 2
-
-      # 🔗 Update kubeconfig
+      # 5️⃣ Connect to EKS
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      # 🚀 Install ArgoCD (stable)
+      # 6️⃣ Install Metrics Server (Fix warning)
+      - name: Install Metrics Server
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+      # 7️⃣ Install AWS Load Balancer Controller (CRDs only)
+      - name: Install ALB Controller CRDs
+        run: |
+          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
+
+      # 8️⃣ Install ArgoCD via Helm (FIXED 🔥)
       - name: Install ArgoCD
         run: |
           kubectl create namespace argocd || true
-          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/v2.9.3/manifests/install.yaml
 
-      # ⏳ Wait for ArgoCD
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+
+          helm upgrade --install argocd argo/argo-cd \
+            --namespace argocd
+
+      # 9️⃣ Wait for ALL ArgoCD Pods (FIXED 🔥)
       - name: Wait for ArgoCD
         run: |
-          kubectl rollout status deployment argocd-server -n argocd --timeout=300s
+          kubectl wait --for=condition=Ready pods --all -n argocd --timeout=600s
 
-      # 🌍 Expose ArgoCD UI
-      - name: Expose ArgoCD
-        run: |
-          kubectl patch svc argocd-server -n argocd \
-          -p '{"spec": {"type": "LoadBalancer"}}'
-
-      # 🔑 Get ArgoCD Password
-      - name: Get ArgoCD Password
-        run: |
-          PASSWORD=$(kubectl get secret argocd-initial-admin-secret -n argocd -o jsonpath="{.data.password}" | base64 --decode)
-          echo "===== ARGOCD PASSWORD ====="
-          echo $PASSWORD
-
-      # 🔥 Create ArgoCD Application (FIXED)
-      - name: Create App
+      # 🔟 Create ArgoCD App
+      - name: Create ArgoCD App
         run: |
           kubectl apply -f - <<EOF
           apiVersion: argoproj.io/v1alpha1
@@ -114,17 +95,14 @@ jobs:
                 selfHeal: true
           EOF
 
-      # 🌍 Expose Application
-      - name: Expose App
+      # 1️⃣1️⃣ Debug (if fail)
+      - name: Debug
+        if: failure()
         run: |
-          kubectl patch svc my-app-service \
-          -p '{"spec": {"type": "LoadBalancer"}}' || true
+          kubectl get pods -n argocd
+          kubectl describe pods -n argocd
 
-      # 📡 Get URLs
-      - name: Show URLs
+      # 1️⃣2️⃣ Get Ingress URL
+      - name: Get Ingress URL
         run: |
-          echo "===== ArgoCD URL ====="
-          kubectl get svc argocd-server -n argocd
-
-          echo "===== App URL ====="
-          kubectl get svc my-app-service
+          kubectl get ingress
