@@ -45,13 +45,11 @@ jobs:
           fi
 
       # 5️⃣ Create Cluster (only if not exists)
-      - name: Create EKS Cluster
-        if: steps.check.outputs.exists == 'false'
+      - name: Connect to Existing Cluster\
         run: |
-          eksctl create cluster \
-            --name my-cluster \
-            --region us-east-1 \
-            --nodes 2
+          aws eks update-kubeconfig \
+             --region us-east-1 \
+             --name my-cluster
 
       # 6️⃣ Connect Cluster
       - name: Update kubeconfig
