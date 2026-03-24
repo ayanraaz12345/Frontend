@@ -1,4 +1,4 @@
-name: CD Pipeline (EKS + ArgoCD + Ingress + FIXED)
+name: CD Pipeline (EKS + ArgoCD + Deploy)
 
 on:
   workflow_dispatch:
@@ -17,45 +17,35 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout
+      # 🔹 1. Checkout
       - name: Checkout
         uses: actions/checkout@v3
 
-      # 2️⃣ AWS Login
+      # 🔐 2. AWS Login (OIDC)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::961641296773:role/OIDC_Raj
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Install kubectl
+      # 🔧 3. Install kubectl
       - name: Install kubectl
         run: |
           curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
           chmod +x kubectl
           sudo mv kubectl /usr/local/bin/
 
-      # 4️⃣ Install Helm (NEW 🔥)
-      - name: Install Helm
-        run: |
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-      # 5️⃣ Connect to EKS
+      # 🔗 4. Connect to EKS (IMPORTANT)
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
 
-      # 6️⃣ Install Metrics Server (Fix warning)
-      - name: Install Metrics Server
+      # 📦 5. Install Helm
+      - name: Install Helm
         run: |
-          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      # 7️⃣ Install AWS Load Balancer Controller (CRDs only)
-      - name: Install ALB Controller CRDs
-        run: |
-          kubectl apply -k "github.com/aws/eks-charts/stable/aws-load-balancer-controller//crds?ref=master"
-
-      # 8️⃣ Install ArgoCD via Helm (FIXED 🔥)
+      # 🚀 6. Install ArgoCD
       - name: Install ArgoCD
         run: |
           kubectl create namespace argocd || true
@@ -66,12 +56,12 @@ jobs:
           helm upgrade --install argocd argo/argo-cd \
             --namespace argocd
 
-      # 9️⃣ Wait for ALL ArgoCD Pods (FIXED 🔥)
+      # ⏳ 7. Wait for ArgoCD
       - name: Wait for ArgoCD
         run: |
           kubectl wait --for=condition=Ready pods --all -n argocd --timeout=600s
 
-      # 🔟 Create ArgoCD App
+      # 🔥 8. Create ArgoCD Application
       - name: Create ArgoCD App
         run: |
           kubectl apply -f - <<EOF
@@ -95,14 +85,17 @@ jobs:
                 selfHeal: true
           EOF
 
-      # 1️⃣1️⃣ Debug (if fail)
-      - name: Debug
-        if: failure()
+      # 🌍 9. Expose App (LoadBalancer)
+      - name: Expose App
         run: |
-          kubectl get pods -n argocd
-          kubectl describe pods -n argocd
+          kubectl patch svc my-app-service \
+          -p '{"spec": {"type": "LoadBalancer"}}' || true
 
-      # 1️⃣2️⃣ Get Ingress URL
-      - name: Get Ingress URL
+      # 📡 10. Get URLs
+      - name: Show URLs
         run: |
-          kubectl get ingress
+          echo "===== ArgoCD URL ====="
+          kubectl get svc argocd-server -n argocd
+
+          echo "===== App URL ====="
+          kubectl get svc my-app-service
