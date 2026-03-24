@@ -1,4 +1,4 @@
-name: Full Pipeline (Delete Old + Create New EKS + ArgoCD + Deploy)
+name: Full Pipeline (Smart Delete + Safe Create + ArgoCD)
 
 on:
   workflow_dispatch:
@@ -30,44 +30,69 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       # 3️⃣ Install tools
-      - name: Install kubectl & eksctl & helm
+      - name: Install kubectl, eksctl, helm
         run: |
           curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
           chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
-          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz" | tar xz -C /tmp
-          sudo mv /tmp/eksctl /usr/local/bin
+          curl -sL https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz | tar xz
+          sudo mv eksctl /usr/local/bin
 
           curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      # 4️⃣ Delete old cluster (SAFE)
-      - name: Delete Old Cluster
+      # 4️⃣ Check OLD cluster
+      - name: Check Old Cluster
+        id: oldcheck
         run: |
-          eksctl delete cluster --name $OLD_CLUSTER --region $AWS_REGION || true
+          if eksctl get cluster --region $AWS_REGION | grep -q $OLD_CLUSTER; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
-      # 5️⃣ Wait for deletion (IMPORTANT)
-      - name: Wait for cleanup
-        run: sleep 120
+      # 5️⃣ Delete OLD cluster (only if exists)
+      - name: Delete Old Cluster
+        if: steps.oldcheck.outputs.exists == 'true'
+        run: |
+          eksctl delete cluster --name $OLD_CLUSTER --region $AWS_REGION
 
-      # 6️⃣ Create NEW cluster
+      # 6️⃣ Wait for deletion properly (IMPORTANT 🔥)
+      - name: Wait for deletion complete
+        if: steps.oldcheck.outputs.exists == 'true'
+        run: |
+          echo "Waiting for full cleanup..."
+          sleep 300
+
+      # 7️⃣ Check NEW cluster
+      - name: Check New Cluster
+        id: newcheck
+        run: |
+          if eksctl get cluster --region $AWS_REGION | grep -q $NEW_CLUSTER; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 8️⃣ Create NEW cluster (only if not exists)
       - name: Create New Cluster
+        if: steps.newcheck.outputs.exists == 'false'
         run: |
           eksctl create cluster \
             --name $NEW_CLUSTER \
             --region $AWS_REGION \
             --nodes 2
 
-      # 7️⃣ Connect to new cluster
+      # 9️⃣ Connect to cluster
       - name: Update kubeconfig
         run: |
           aws eks update-kubeconfig --name $NEW_CLUSTER --region $AWS_REGION
 
-      # 8️⃣ Verify cluster
+      # 🔟 Verify cluster
       - name: Verify Cluster
         run: |
           kubectl get nodes
 
-      # 9️⃣ Install ArgoCD
+      # 1️⃣1️⃣ Install ArgoCD (Helm - stable)
       - name: Install ArgoCD
         run: |
           kubectl create namespace argocd || true
@@ -78,18 +103,18 @@ jobs:
           helm upgrade --install argocd argo/argo-cd \
             --namespace argocd
 
-      # 🔟 Wait for ArgoCD
+      # 1️⃣2️⃣ Wait for ArgoCD
       - name: Wait for ArgoCD
         run: |
           kubectl wait --for=condition=Ready pods --all -n argocd --timeout=600s
 
-      # 1️⃣1️⃣ Expose ArgoCD
+      # 1️⃣3️⃣ Expose ArgoCD
       - name: Expose ArgoCD
         run: |
           kubectl patch svc argocd-server -n argocd \
           -p '{"spec": {"type": "LoadBalancer"}}'
 
-      # 1️⃣2️⃣ Create ArgoCD App
+      # 1️⃣4️⃣ Create ArgoCD App
       - name: Create ArgoCD App
         run: |
           kubectl apply -f - <<EOF
@@ -113,8 +138,7 @@ jobs:
                 selfHeal: true
           EOF
 
-      # 1️⃣3️⃣ Show URLs
-      - name: Show URLs
+      # 1️⃣5️⃣ Show URL
+      - name: Show URL
         run: |
-          echo "===== ArgoCD URL ====="
           kubectl get svc argocd-server -n argocd
