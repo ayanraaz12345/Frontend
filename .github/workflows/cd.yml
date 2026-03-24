@@ -42,7 +42,7 @@ jobs:
             echo "exists=true" >> $GITHUB_OUTPUT
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-          fi
+          figit 
 
       # 5️⃣ Create Cluster (only if not exists)
       - name: Connect to Existing Cluster\
